@@ -5,45 +5,72 @@ const axios = require('axios');
 const router = express.Router();
 
 /*
-  This endpoint fetches the latest forex rates using the exchangerate.host API.
-  Endpoint used: https://api.exchangerate.host/latest?base=USD
-  
-  The API returns data in the following format:
-  {
-    "motd": {...},
-    "success": true,
-    "base": "USD",
-    "date": "2021-09-01",
-    "rates": {
-      "EUR": 0.85,
-      "GBP": 0.72,
-      ...
-    }
-  }
-  
-  We transform the "rates" object into an array of objects for easier use in the frontend chart.
+  Endpoint: GET /api/economic/calendar
+  Description: Fetches the economic calendar from Trading Economics.
 */
-
-router.get('/forex', async (req, res) => {
+router.get('/calendar', async (req, res) => {
   try {
-    // Fetch forex data from exchangerate.host with USD as the base currency
-    const response = await axios.get('https://api.exchangerate.host/latest?base=USD');
-    
-    // Extract the rates and date from the API response
-    const { rates, date } = response.data;
-    
-    // Transform the rates object into an array of objects:
-    // Each object will have the currency code, the exchange rate, and the date of the data.
-    const forexData = Object.entries(rates).map(([currency, rate]) => ({
-      currency,
-      rate,
-      date  // Same date for all rates since this is the latest snapshot
-    }));
-    
-    res.json(forexData);
+    const tradingEconKey = process.env.TRADING_ECON_API_KEY;
+    if (!tradingEconKey) {
+      console.error("TRADING_ECON_API_KEY not defined in .env");
+      return res.status(500).json({ error: "Server configuration error: Trading Economics API key missing" });
+    }
+
+    const calendarUrl = `https://api.tradingeconomics.com/calendar?c=${tradingEconKey}`;
+    const response = await axios.get(calendarUrl);
+    console.log("Trading Economics Calendar Response:", response.data);
+    res.json(response.data);
   } catch (error) {
-    console.error('Error fetching forex data:', error);
-    res.status(500).send('Error fetching forex data');
+    console.error("Error fetching economic calendar:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/*
+  Endpoint: GET /api/economic/rates
+  Description: Fetches forex market data from Trading Economics.
+*/
+router.get('/rates', async (req, res) => {
+  try {
+    const tradingEconKey = process.env.TRADING_ECON_API_KEY;
+    if (!tradingEconKey) {
+      console.error("TRADING_ECON_API_KEY not defined in .env");
+      return res.status(500).json({ error: "Server configuration error: Trading Economics API key missing" });
+    }
+
+    // Corrected endpoint for forex data
+    const ratesUrl = `https://api.tradingeconomics.com/markets/currency?c=${tradingEconKey}`;
+    const response = await axios.get(ratesUrl);
+    
+    console.log("Trading Economics Forex Rates Response:", response.data);
+    res.json(response.data);
+  } catch (error) {
+    console.error("Error fetching forex rates:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/*
+  Endpoint: GET /api/economic/commodities
+  Description: Fetches commodities market data from Trading Economics.
+*/
+router.get('/commodities', async (req, res) => {
+  try {
+    const tradingEconKey = process.env.TRADING_ECON_API_KEY;
+    if (!tradingEconKey) {
+      console.error("TRADING_ECON_API_KEY not defined in .env");
+      return res.status(500).json({ error: "Server configuration error: Trading Economics API key missing" });
+    }
+
+    // Corrected endpoint for commodity market data
+    const commoditiesUrl = `https://api.tradingeconomics.com/markets/commodity?c=${tradingEconKey}`;
+    const response = await axios.get(commoditiesUrl);
+    
+    console.log("Trading Economics Commodities Response:", response.data);
+    res.json(response.data);
+  } catch (error) {
+    console.error("Error fetching commodities data:", error.message);
+    res.status(500).json({ error: error.message });
   }
 });
 
